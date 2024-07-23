@@ -1,6 +1,7 @@
 import io
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from aiogram import types, Router, F
 from aiogram.filters import CommandStart, and_f
@@ -14,7 +15,6 @@ from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_f
 from data.file_extensions import is_phone_word_validator, blue_fill, violet_fill
 from keyboards import default_kb
 from loader import dp, bot
-from states import ProhibitProductDataState
 
 default_router = Router(name=__name__)
 
@@ -75,6 +75,8 @@ async def get_file_excel(message: types.Message):
 
     # Загрузка данных из файла Excel
     df = pd.read_excel(file_stream, header=4, skiprows=[5])
+    df['Пинфл'] = df['Пинфл'].astype(str)
+    df.replace({np.nan: None}, inplace=True)
 
     # Загрузка рабочего листа Excel
     file_stream.seek(0)  # Сброс позиции потока для openpyxl
@@ -91,38 +93,39 @@ async def get_file_excel(message: types.Message):
     prohibited_product_rows = defaultdict(bool)
 
     for index, row in df.iterrows():
-        passport = str(row.get('Номер паспорта', ''))
+        passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
         product_name = str(row.get('Наименование товара', ''))
         description = str(row.get('Описание', ''))
-        barcode = str(row.get('Баркод', ''))
-        row = int(index + 7)
+        barcode = row.get('Баркод', '')
+        row_index = int(index + 7)
 
         if contains_prohibited_product(product_name) or contains_prohibited_product(description):
             # Помечаем строку красным цветом
             for col_idx in range(1, len(df.columns) + 1):
-                cell = sheet.cell(row=row, column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
+                cell = sheet.cell(row=row_index,
+                                  column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
                 cell.fill = red_fill
 
             # Сохраняем номер строки чтобы не перекрашивать её в  фиолетовый
-            prohibited_product_rows[str(row)] = True
+            prohibited_product_rows[str(row_index)] = True
 
         # Проверка на отсутствие или некорректность данных
         if not is_valid_passport(passport):
-            cell = sheet.cell(row=row, column=passport_col_idx)
+            cell = sheet.cell(row=row_index, column=passport_col_idx)
             cell.fill = yellow_fill
         if not is_valid_pinfl(pinfl):
-            cell = sheet.cell(row=row, column=pinfl_col_idx)
+            cell = sheet.cell(row=row_index, column=pinfl_col_idx)
             cell.fill = yellow_fill
         if is_phone_word_validator(product_name) or is_phone_word_validator(description):
-            cell = sheet.cell(row=row, column=product_name_col_idx)
-            cell2 = sheet.cell(row=row, column=description_col_idx)
+            cell = sheet.cell(row=row_index, column=product_name_col_idx)
+            cell2 = sheet.cell(row=row_index, column=description_col_idx)
             cell.fill = blue_fill
             cell2.fill = blue_fill
 
         # Считаем кол-во заказов по польpователям, нужно чтобы потом красить повторяющие красить
-        if passport and barcode and not prohibited_product_rows.get(str(row), None):
-            duplicate_orders_dict[f'{passport}_{barcode}'].append(row)
+        if passport and barcode and not prohibited_product_rows.get(str(row_index), None):
+            duplicate_orders_dict[f'{passport}_{barcode}'].append(row_index)
 
     # Красив на фиолетовый повторяющиеся заказы одного пользователя
     for key in duplicate_orders_dict.keys():
@@ -144,6 +147,8 @@ async def get_file_excel(message: types.Message):
 async def added_prohibit_product(message: types.Message, state: FSMContext):
     await message.answer('В работе..', reply_markup=default_kb.cancel_markup)
     # await state.set_state(ProhibitProductDataState.product_name)
+
+
 #
 #
 # @dp.message(ProhibitProductDataState.product_name)

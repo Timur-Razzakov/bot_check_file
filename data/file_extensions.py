@@ -10,7 +10,7 @@ from data.prohibit_product import PROHIBIT_PRODUCT
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 blue_fill = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")
-violet_fill = PatternFill(start_color="8B00FF", end_color="8B00FF", fill_type="solid")
+violet_fill = PatternFill(start_color="B65DFF", end_color="B65DFF", fill_type="solid")
 
 # Путь к папке для загрузок
 DOWNLOADS_DIR = 'downloads'
