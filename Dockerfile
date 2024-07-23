@@ -18,5 +18,4 @@ EXPOSE 8000
 COPY startup.sh /app/startup.sh
 RUN chmod +x /app/startup.sh
 
-CMD ["/app/startup.sh"]OPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
+CMD ["/app/startup.sh"]

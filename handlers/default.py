@@ -120,7 +120,7 @@ async def get_file_excel(message: types.Message):
             cell.fill = blue_fill
             cell2.fill = blue_fill
 
-        # Считаем кол-во заказов по польователям, нужно чтобы потом красить повторяющие красить
+        # Считаем кол-во заказов по польpователям, нужно чтобы потом красить повторяющие красить
         if passport and barcode and not prohibited_product_rows.get(str(row), None):
             duplicate_orders_dict[f'{passport}_{barcode}'].append(row)
 
@@ -142,8 +142,8 @@ async def get_file_excel(message: types.Message):
 
 @dp.message(F.text == 'Добавить запрещёнку')
 async def added_prohibit_product(message: types.Message, state: FSMContext):
-    await message.answer('Введите значения через ЗАПЯТУЮ', reply_markup=default_kb.cancel_markup)
-    await state.set_state(ProhibitProductDataState.product_name)
+    await message.answer('В работе..', reply_markup=default_kb.cancel_markup)
+    # await state.set_state(ProhibitProductDataState.product_name)
 #
 #
 # @dp.message(ProhibitProductDataState.product_name)
@@ -157,10 +157,9 @@ async def added_prohibit_product(message: types.Message, state: FSMContext):
 #     await state.set_state(HelpState.contact)
 #
 #
-# @dp.message(F.text == 'Список запрещённых товаров')
-# async def prohibit_product_list(message: types.Message):
-#     await message.answer('Вставьте файл', reply_markup=default_kb.cancel_markup)
-#
+@dp.message(F.text == 'Список запрещённых товаров')
+async def prohibit_product_list(message: types.Message):
+    await message.answer('В работе..', reply_markup=default_kb.cancel_markup)
 #
 # async def save_prohibit_name(product_name, session_maker):
 #     """

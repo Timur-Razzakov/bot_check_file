@@ -4,6 +4,8 @@ from aiogram import types
 from aiogram.filters import BaseFilter
 from openpyxl.styles import PatternFill
 
+from data.prohibit_product import PROHIBIT_PRODUCT
+
 # Задаем цвета для окрашивания
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
@@ -41,27 +43,15 @@ def is_valid_passport(passport):
 
 def is_valid_pinfl(pinfl):
     pinfl = pinfl.strip()
-
     try:
         pinfl = int(float(pinfl))
     except Exception as e:
-        print('AAAAAAAAAAAAA', pinfl, e)
         return False
-
     return len(str(pinfl)) == 14
 
 
 def is_phone_word_validator(value: str) -> bool:
     return 'телефон' in value.lower() or 'смартфон' in value.lower()
-
-
-# список запрещённых товаров
-PROHIBIT_PRODUCT = [
-    'Товары 18+', 'Семена', 'растения', 'Удобрения', 'Ножи', 'холодное оружие', 'Бонги',
-    'Исламская литература', 'Лекарства', 'БАДы', 'витамины', 'Патроны', 'гильзы', 'оружия',
-    'игрушки металлические', 'Газовые баллончики', 'Муравьиная кислота', 'Шокер', 'Грибы',
-    'Шары для страйкбола', 'Пиротехника'
-]
 
 
 def contains_prohibited_product(text):
