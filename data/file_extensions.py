@@ -30,19 +30,6 @@ class DocumentTypeFilter(BaseFilter):
         return False
 
 
-def process_excel_file(file_path: str):
-    # Здесь должна быть логика для обработки Excel файла
-    # Например, можно использовать библиотеку pandas для чтения и обработки файла
-    import pandas as pd
-
-    df = pd.read_excel(file_path)
-    # Выполните необходимые операции с данными
-    print(df.head())
-
-    # Не забудьте удалить файл после обработки, если он больше не нужен
-    os.remove(file_path)
-
-
 # Функция для проверки корректности номера паспорта
 def is_valid_passport(passport):
     passport = passport.strip()
@@ -55,3 +42,20 @@ def is_valid_pinfl(pinfl):
     pinfl = pinfl.strip()
     result = pinfl.isdigit() and len(pinfl) == 14
     return result
+
+
+# список запрещённых товаров
+PROHIBIT_PRODUCT = [
+    'Товары 18+', 'Семена', 'растения', 'Удобрения', 'Ножи', 'холодное оружие', 'Бонги',
+    'Исламская литература', 'Лекарства', 'БАДы', 'витамины', 'Патроны', 'гильзы', 'оружия',
+    'игрушки металлические', 'Газовые баллончики', 'Муравьиная кислота', 'Шокер', 'Грибы',
+    'Шары для страйкбола', 'Пиротехника'
+]
+
+
+def contains_prohibited_product(text):
+    """Функция для проверки наличия запрещённого товара в тексте."""
+    for product in PROHIBIT_PRODUCT:
+        if product.lower() in text.lower():
+            return True
+    return False

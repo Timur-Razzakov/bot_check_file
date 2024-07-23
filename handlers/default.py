@@ -5,13 +5,34 @@ from aiogram import types, Router, F
 from aiogram.filters import CommandStart, and_f
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile
+from asgiref.sync import sync_to_async
 from openpyxl.reader.excel import load_workbook
 
-from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl
+from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl, \
+    contains_prohibited_product, red_fill
 from keyboards import default_kb
 from loader import dp, bot
+from states import ProhibitProductDataState
+from utils.db import ProhibitedProduct
 
 default_router = Router(name=__name__)
+
+
+class ProhibitData:
+    # получаем text и контакт для связи
+    def __init__(self):
+        self.product_name = None
+
+
+prohibit_data = {}
+
+
+# Создаем функцию для инициализации get_help_text
+@sync_to_async
+def get_prohibit_text(user_id):
+    if user_id not in prohibit_data:
+        prohibit_data[user_id] = ProhibitData()
+    return prohibit_data[user_id]
 
 
 @dp.message(
@@ -40,7 +61,6 @@ async def prompt_file_upload(message: types.Message):
 async def get_file_excel(message: types.Message):
     # Скачивание файла
     document = message.document
-    file_name = document.file_name
     file_info = await bot.get_file(document.file_id)
     file_stream = io.BytesIO()
     await bot.download_file(file_info.file_path, file_stream)
@@ -59,12 +79,21 @@ async def get_file_excel(message: types.Message):
     workbook = load_workbook(file_stream)
     sheet = workbook.active
 
+    # Индексы колонок с паспортом и ПИНФЛ
     passport_col_idx = df.columns.get_loc('Номер паспорта') + 1
     pinfl_col_idx = df.columns.get_loc('Пинфл') + 1
 
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', ''))
         pinfl = str(row.get('Пинфл', ''))
+        product_name = str(row.get('Наименование товара', ''))
+        product_desc = str(row.get('Описание', ''))
+        if contains_prohibited_product(product_name) or contains_prohibited_product(product_desc):
+            # Помечаем строку красным цветом
+            for col_idx in range(1, len(df.columns) + 1):
+                cell = sheet.cell(row=index + 7,
+                                  column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
+                cell.fill = red_fill
         # Проверка на отсутствие или некорректность данных
         if not is_valid_passport(passport):
             cell = sheet.cell(row=index + 7, column=passport_col_idx)
@@ -77,7 +106,40 @@ async def get_file_excel(message: types.Message):
     output_stream = io.BytesIO()
     workbook.save(output_stream)
     output_stream.seek(0)
-    # Отправка изменённого файла пользователю
-    # await message.answer_document(types.InputFile(output_stream, filename=f'colored_{file_name}'))
     file = BufferedInputFile(output_stream.getvalue(), "output.xlsx")
     await message.answer_document(file)
+
+
+@dp.message(F.text == 'Добавить запрещёнку')
+async def added_prohibit_product(message: types.Message, state: FSMContext):
+    await message.answer('Введите значения через ЗАПЯТУЮ', reply_markup=default_kb.cancel_markup)
+    await state.set_state(ProhibitProductDataState.product_name)
+#
+#
+# @dp.message(ProhibitProductDataState.product_name)
+# async def get_product_name(message: types.Message, state: FSMContext):
+#     user_id = message.chat.id
+#     prohibit_data = await get_prohibit_text(user_id)
+#     prohibit_data.product_name = message.text
+#     prohibit_data.user_id = message.chat.id
+#     await message.answer(text=_(ru_texts['enter_contact_info'], selected_language),
+#                          reply_markup=cancel_markup(user_id))
+#     await state.set_state(HelpState.contact)
+#
+#
+# @dp.message(F.text == 'Список запрещённых товаров')
+# async def prohibit_product_list(message: types.Message):
+#     await message.answer('Вставьте файл', reply_markup=default_kb.cancel_markup)
+#
+#
+# async def save_prohibit_name(product_name, session_maker):
+#     """
+#     Сохраняем в бд
+#     :param product_name:
+#     :param session_maker:
+#     :return:
+#     """
+#     country = await ProhibitedProduct.create_country(
+#         product_name=product_name,
+#         session_maker=session_maker)
+#     return country
