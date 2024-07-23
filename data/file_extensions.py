@@ -17,7 +17,7 @@ if not os.path.exists(DOWNLOADS_DIR):
 
 class DocumentTypeFilter(BaseFilter):
     def __init__(self, allowed_extensions: list = None):
-        self.allowed_extensions=['.xlsx', '.xls']if not allowed_extensions else allowed_extensions
+        self.allowed_extensions = ['.xlsx', '.xls'] if not allowed_extensions else allowed_extensions
 
     async def __call__(self, message: types.Message) -> bool:
         if message.document:
@@ -45,4 +45,13 @@ def process_excel_file(file_path: str):
 
 # Функция для проверки корректности номера паспорта
 def is_valid_passport(passport):
-    return isinstance(passport, str) and len(passport) == 9 and passport[:2].isalpha() and passport[2:].isdigit()
+    passport = passport.strip()
+    result = isinstance(passport, str) and len(passport) == 9 and passport[:2].isalpha() and passport[
+                                                                                             2:].isdigit()
+    return result
+
+
+def is_valid_pinfl(pinfl):
+    pinfl = pinfl.strip()
+    result = pinfl.isdigit() and len(pinfl) == 14
+    return result
