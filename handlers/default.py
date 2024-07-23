@@ -1,4 +1,5 @@
 import io
+from collections import defaultdict
 
 import pandas as pd
 from aiogram import types, Router, F
@@ -10,10 +11,10 @@ from openpyxl.reader.excel import load_workbook
 
 from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl, \
     contains_prohibited_product, red_fill
+from data.file_extensions import is_phone_word_validator, blue_fill, violet_fill
 from keyboards import default_kb
 from loader import dp, bot
 from states import ProhibitProductDataState
-from utils.db import ProhibitedProduct
 
 default_router = Router(name=__name__)
 
@@ -61,6 +62,7 @@ async def prompt_file_upload(message: types.Message):
 async def get_file_excel(message: types.Message):
     # Скачивание файла
     document = message.document
+    file_name = document.file_name
     file_info = await bot.get_file(document.file_id)
     file_stream = io.BytesIO()
     await bot.download_file(file_info.file_path, file_stream)
@@ -82,25 +84,53 @@ async def get_file_excel(message: types.Message):
     # Индексы колонок с паспортом и ПИНФЛ
     passport_col_idx = df.columns.get_loc('Номер паспорта') + 1
     pinfl_col_idx = df.columns.get_loc('Пинфл') + 1
+    product_name_col_idx = df.columns.get_loc('Наименование товара') + 1
+    description_col_idx = df.columns.get_loc('Описание') + 1
+
+    duplicate_orders_dict = defaultdict(list)
+    prohibited_product_rows = defaultdict(bool)
 
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', ''))
         pinfl = str(row.get('Пинфл', ''))
         product_name = str(row.get('Наименование товара', ''))
-        product_desc = str(row.get('Описание', ''))
-        if contains_prohibited_product(product_name) or contains_prohibited_product(product_desc):
+        description = str(row.get('Описание', ''))
+        barcode = str(row.get('Баркод', ''))
+        row = int(index + 7)
+
+        if contains_prohibited_product(product_name) or contains_prohibited_product(description):
             # Помечаем строку красным цветом
             for col_idx in range(1, len(df.columns) + 1):
-                cell = sheet.cell(row=index + 7,
-                                  column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
+                cell = sheet.cell(row=row, column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
                 cell.fill = red_fill
+
+            # Сохраняем номер строки чтобы не перекрашивать её в  фиолетовый
+            prohibited_product_rows[str(row)] = True
+
         # Проверка на отсутствие или некорректность данных
         if not is_valid_passport(passport):
-            cell = sheet.cell(row=index + 7, column=passport_col_idx)
+            cell = sheet.cell(row=row, column=passport_col_idx)
             cell.fill = yellow_fill
         if not is_valid_pinfl(pinfl):
-            cell = sheet.cell(row=index + 7, column=pinfl_col_idx)
+            cell = sheet.cell(row=row, column=pinfl_col_idx)
             cell.fill = yellow_fill
+        if is_phone_word_validator(product_name) or is_phone_word_validator(description):
+            cell = sheet.cell(row=row, column=product_name_col_idx)
+            cell2 = sheet.cell(row=row, column=description_col_idx)
+            cell.fill = blue_fill
+            cell2.fill = blue_fill
+
+        # Считаем кол-во заказов по польователям, нужно чтобы потом красить повторяющие красить
+        if passport and barcode and not prohibited_product_rows.get(str(row), None):
+            duplicate_orders_dict[f'{passport}_{barcode}'].append(row)
+
+    # Красив на фиолетовый повторяющиеся заказы одного пользователя
+    for key in duplicate_orders_dict.keys():
+        duplicate_rows = duplicate_orders_dict[key]
+        if len(duplicate_rows) > 1:
+            for row in duplicate_rows:
+                for cell in sheet[row]:
+                    cell.fill = violet_fill
 
     # Сохранение изменений в новый файл Excel в память
     output_stream = io.BytesIO()

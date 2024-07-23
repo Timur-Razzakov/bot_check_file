@@ -7,7 +7,8 @@ from openpyxl.styles import PatternFill
 # Задаем цвета для окрашивания
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-blue_fill = PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")
+blue_fill = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")
+violet_fill = PatternFill(start_color="8B00FF", end_color="8B00FF", fill_type="solid")
 
 # Путь к папке для загрузок
 DOWNLOADS_DIR = 'downloads'
@@ -40,8 +41,18 @@ def is_valid_passport(passport):
 
 def is_valid_pinfl(pinfl):
     pinfl = pinfl.strip()
-    result = pinfl.isdigit() and len(pinfl) == 14
-    return result
+
+    try:
+        pinfl = int(float(pinfl))
+    except Exception as e:
+        print('AAAAAAAAAAAAA', pinfl, e)
+        return False
+
+    return len(str(pinfl)) == 14
+
+
+def is_phone_word_validator(value: str) -> bool:
+    return 'телефон' in value.lower() or 'смартфон' in value.lower()
 
 
 # список запрещённых товаров
