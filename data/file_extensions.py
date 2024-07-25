@@ -1,10 +1,11 @@
 import os
+import re
 
 from aiogram import types
 from aiogram.filters import BaseFilter
 from openpyxl.styles import PatternFill
 
-from data.prohibit_product import PROHIBIT_PRODUCT
+from data.prohibit_product import PROHIBIT_PRODUCT, REPLACEMENT
 
 # Задаем цвета для окрашивания
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
@@ -36,10 +37,15 @@ class DocumentTypeFilter(BaseFilter):
 # Функция для проверки корректности номера паспорта
 def is_valid_passport(passport):
     passport = passport.strip()
-    result = isinstance(passport, str) and len(passport) == 9 and passport[:2].isalpha() and passport[
-                                                                                             2:].isdigit()
+    result = (
+            isinstance(passport, str) and
+            len(passport) == 9 and
+            passport[:2].isalpha() and
+            passport[:2].isupper() and
+            passport[2:].isdigit() and
+            ' ' not in passport
+    )
     return result
-
 
 def is_valid_pinfl(pinfl):
     pinfl = pinfl.strip()
@@ -60,3 +66,8 @@ def contains_prohibited_product(text):
         if product.lower() in text.lower():
             return True
     return False
+
+
+def replace_words(text, replacements):
+    pattern = re.compile('|'.join(re.escape(word) for word in replacements), re.IGNORECASE)
+    return pattern.sub(lambda match: REPLACEMENT, text)
