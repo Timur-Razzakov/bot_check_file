@@ -36,16 +36,10 @@ class DocumentTypeFilter(BaseFilter):
 
 # Функция для проверки корректности номера паспорта
 def is_valid_passport(passport):
-    passport = passport.strip()
-    result = (
-            isinstance(passport, str) and
-            len(passport) == 9 and
-            passport[:2].isalpha() and
-            passport[:2].isupper() and
-            passport[2:].isdigit() and
-            ' ' not in passport
-    )
-    return result
+    # Удаляем пробелы и приводим буквы к заглавному регистру
+    cleaned_passport = passport.strip().replace(' ', '').upper()
+    result = isinstance(cleaned_passport, str) and len(cleaned_passport) == 9 and cleaned_passport[:2].isalpha() and cleaned_passport[2:].isdigit()
+    return result, cleaned_passport
 
 def is_valid_pinfl(pinfl):
     return isinstance(pinfl, str) and len(pinfl) == 14 and pinfl.isdigit()

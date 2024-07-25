@@ -126,12 +126,16 @@ async def get_file_excel(message: types.Message):
 
             # Сохраняем номер строки чтобы не перекрашивать её в  фиолетовый
             prohibited_product_rows[str(row_index)] = True
-
-        # Проверка на отсутствие или некорректность данных
-        if not is_valid_passport(passport):
+        is_valid, cleaned_passport = is_valid_passport(passport)
+        if not is_valid:
             cell = sheet.cell(row=row_index, column=passport_col_idx)
             cell.fill = yellow_fill
             invalid_data = True
+        else:
+            # Внесение изменений в DataFrame и лист Excel
+            df.at[index, 'Номер паспорта'] = cleaned_passport
+            sheet.cell(row=row_index, column=passport_col_idx, value=cleaned_passport)
+
         if not is_valid_pinfl(pinfl):
             cell = sheet.cell(row=row_index, column=pinfl_col_idx)
             cell.fill = yellow_fill
