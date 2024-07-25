@@ -11,7 +11,7 @@ from data.prohibit_product import PROHIBIT_PRODUCT, REPLACEMENT
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 blue_fill = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")
-violet_fill = PatternFill(start_color="8B00FF", end_color="8B00FF", fill_type="solid")
+violet_fill = PatternFill(start_color="B65DFF", end_color="B65DFF", fill_type="solid")
 
 # Путь к папке для загрузок
 DOWNLOADS_DIR = 'downloads'
@@ -48,12 +48,8 @@ def is_valid_passport(passport):
     return result
 
 def is_valid_pinfl(pinfl):
-    pinfl = pinfl.strip()
-    try:
-        pinfl = int(float(pinfl))
-    except Exception as e:
-        return False
-    return len(str(pinfl)) == 14
+    return isinstance(pinfl, str) and len(pinfl) == 14 and pinfl.isdigit()
+
 
 
 def is_phone_word_validator(value: str) -> bool:

@@ -1,6 +1,7 @@
 import io
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from aiogram import types, Router, F
 from aiogram.filters import CommandStart, and_f
@@ -75,9 +76,10 @@ async def get_file_excel(message: types.Message):
     await message.answer('Файл скачен, идёт обработка. Подождите!!')
     # Загрузка данных из файла Excel
     df = pd.read_excel(file_stream, header=4, skiprows=[5])
-
     # Преобразование ПИНФЛ в целые числа
     df['Пинфл'] = df['Пинфл'].astype('Int64')
+
+    df.replace({np.nan: None}, inplace=True)
 
     # Загрузка рабочего листа Excel
     file_stream.seek(0)  # Сброс позиции потока для openpyxl
@@ -97,54 +99,53 @@ async def get_file_excel(message: types.Message):
     unique_data = []
 
     for index, row in df.iterrows():
-        passport = str(row.get('Номер паспорта', ''))
+        passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
         product_name = str(row.get('Наименование товара', ''))
         description = str(row.get('Описание', ''))
-        barcode = str(row.get('Баркод', ''))
+        barcode = row.get('Баркод', '')
         full_name = str(row.get('ФИО получателя физ. лица', ''))
-        row = int(index + 7)
+        row_index = int(index + 7)
 
-        # Замена слов в колонках 'Наименование товара' и 'Описание'
         product_name = replace_words(product_name, REPLACE_WORDS)
         description = replace_words(description, REPLACE_WORDS)
         df.at[index, 'Наименование товара'] = product_name
         df.at[index, 'Описание'] = description
 
         # Обновление значений в рабочем листе
-        sheet.cell(row=row, column=product_name_col_idx, value=product_name)
-        sheet.cell(row=row, column=description_col_idx, value=description)
+        sheet.cell(row=row_index, column=product_name_col_idx, value=product_name)
+        sheet.cell(row=row_index, column=description_col_idx, value=description)
         invalid_data = False
+
         if contains_prohibited_product(product_name) or contains_prohibited_product(description):
             # Помечаем строку красным цветом
             for col_idx in range(1, len(df.columns) + 1):
-                cell = sheet.cell(row=row,
+                cell = sheet.cell(row=row_index,
                                   column=col_idx)  # +7, так как header=4 и skiprows=[5] добавляют смещение
                 cell.fill = red_fill
-                invalid_data = True
+
             # Сохраняем номер строки чтобы не перекрашивать её в  фиолетовый
-            prohibited_product_rows[str(row)] = True
+            prohibited_product_rows[str(row_index)] = True
 
         # Проверка на отсутствие или некорректность данных
-
         if not is_valid_passport(passport):
-            cell = sheet.cell(row=row, column=passport_col_idx)
+            cell = sheet.cell(row=row_index, column=passport_col_idx)
             cell.fill = yellow_fill
             invalid_data = True
         if not is_valid_pinfl(pinfl):
-            cell = sheet.cell(row=row, column=pinfl_col_idx)
+            cell = sheet.cell(row=row_index, column=pinfl_col_idx)
             cell.fill = yellow_fill
             invalid_data = True
         if is_phone_word_validator(product_name) or is_phone_word_validator(description):
-            cell = sheet.cell(row=row, column=product_name_col_idx)
-            cell2 = sheet.cell(row=row, column=description_col_idx)
+            cell = sheet.cell(row=row_index, column=product_name_col_idx)
+            cell2 = sheet.cell(row=row_index, column=description_col_idx)
             cell.fill = blue_fill
             cell2.fill = blue_fill
             invalid_data = True
 
         # Считаем кол-во заказов по польpователям, нужно чтобы потом красить повторяющие красить
-        if passport and barcode and not prohibited_product_rows.get(str(row), None):
-            duplicate_orders_dict[f'{passport}_{barcode}'].append(row)
+        if passport and barcode and not prohibited_product_rows.get(str(row_index), None):
+            duplicate_orders_dict[f'{passport}_{barcode}'].append(row_index)
 
         # Сохранение уникальных паспортов и данных, только если данные корректны
         if passport not in unique_passports and not invalid_data:
