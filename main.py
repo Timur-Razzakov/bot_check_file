@@ -15,13 +15,13 @@ from utils.db import create_async_engine, Base, get_session_maker, proceed_schem
 
 async def main() -> None:
     # Проверяем авторизацию на сайте ВБ без этого запускать бота бессмысленно
-    # token, error = await get_access_token(
-    #     employee_id=config.WB_EMPLOYEE_ID, password=config.WB_PASSWORD
-    # )
-    # if error:
-    #     logging.error(error)
-    #     logging.error("Возникла ошибка при авторизации обратитесь разработчику")
-    #     return
+    token, error = await get_access_token(
+        employee_id=config.WB_EMPLOYEE_ID, password=config.WB_PASSWORD
+    )
+    if error:
+        logging.error(error)
+        logging.error("Возникла ошибка при авторизации обратитесь разработчику")
+        return
 
     # создаём боковую панель
     commands_for_bot = []
@@ -39,11 +39,11 @@ async def main() -> None:
         host=config.DB_HOST,
         port=config.DB_PORT
     )
-    # async_engine = create_async_engine(postgresql_url)
-    # session_maker = get_session_maker(async_engine)  # для работы с бд создаём сессии
-    # await proceed_schemas(async_engine, Base.metadata)
-    # await async_engine.dispose()  # решает проблему с event loop
-    await dp.start_polling(bot, context={"access_token": None})
+    async_engine = create_async_engine(postgresql_url)
+    session_maker = get_session_maker(async_engine)  # для работы с бд создаём сессии
+    await proceed_schemas(async_engine, Base.metadata)
+    await async_engine.dispose()  # решает проблему с event loop
+    await dp.start_polling(bot, session_maker=session_maker, skip_updates=True, context={"access_token": token})
 
 
 if __name__ == '__main__':
