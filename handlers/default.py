@@ -1,5 +1,5 @@
 import io
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -14,9 +14,11 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl, \
     contains_prohibited_product, red_fill, replace_words
 from data.file_extensions import is_phone_word_validator, blue_fill, violet_fill
-from data.prohibit_product import REPLACE_WORDS, REPLACEMENT
+from data.prohibit_product import REPLACE_WORDS
 from keyboards import default_kb
 from loader import dp, bot
+from services.wb_parser.wb_parser import get_metadata_from_wb
+from utils.utils import download_file, is_convertible_to_int
 
 default_router = Router(name=__name__)
 
@@ -61,27 +63,57 @@ async def prompt_file_upload(message: types.Message):
 
 
 @default_router.message(and_f(F.document, DocumentTypeFilter(allowed_extensions=['.xlsx', '.xls'])))
-async def get_file_excel(message: types.Message):
+async def get_file_excel(message: types.Message, context: dict):
     # Скачивание файла
-    document = message.document
-    file_info = await bot.get_file(document.file_id)
-    file_stream = io.BytesIO()
-    await bot.download_file(file_info.file_path, file_stream)
-    file_stream.seek(0)
-
-    # Проверка, что файл был скачан правильно
-    if file_stream.getbuffer().nbytes == 0:
-        await message.answer("Ошибка: файл не был скачан.")
+    file_stream, error = await download_file(bot, message.document)
+    if error:
+        await message.answer(error)
         return
+
     await message.answer('Файл скачен, идёт обработка. Подождите!!')
+
     # Загрузка данных из файла Excel
-    df = pd.read_excel(file_stream, header=4, skiprows=[5])
+    df = pd.read_excel(file_stream, header=4)
+
+    # Проверка на наличие нужных столбцов
+    required_columns = ['ШК', 'Артикул сайта', 'Наименование товара', 'Описание', 'Баркод', 'ФИО получателя физ. лица',
+                        'Номер паспорта', 'Пинфл', 'Контактный номер', ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        await message.answer(f"В файле отсутствуют столбцы: {', '.join(missing_columns)}")
+        return
+
     # Преобразование ПИНФЛ в целые числа
     df['Пинфл'] = df['Пинфл'].astype('Int64')
-
     df.replace({np.nan: None}, inplace=True)
 
+    # Проверяем, можно ли все элементы первой строки преобразовать в целые числа
+    if all(map(is_convertible_to_int, df.iloc[0])):
+        # Удаление первой строки, если она содержит только значения, преобразуемые в целые числа
+        df.drop(index=0, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+    print(df.head())
+    # Получаем токен и Штрих коды с сохранением их порядка для загрузки данных из ВБ
+    shk_dict = df['ШК'].head().apply(lambda x: OrderedDict({str(x): None})).tolist()
+    token = context["access_token"]
+
+    # Загрузка данных о товаре из WB и обновления токена авторизации
+    parsed_df, new_token = get_metadata_from_wb(message, shk_dict, token)
+    context["access_token"] = new_token
+    # parsed_df = pd.read_excel("Реестр_200285257- по листам_output.xlsx")
+    # parsed_df = pd.read_excel("Реестр_200086623_output.xlsx")
+    # Объединение данных из ВБ с данными из реестра
+    df["Категория"] = parsed_df["Категория"]
+    df["Подкатегория"] = parsed_df["Подкатегория"]
+    df["Артикул сайта"] = parsed_df["Артикул"]
+    # # для теста
+    # df["Артикул"] = parsed_df["Артикул"]
+    # df["Названия"] = parsed_df["Названия"]
+
     # Загрузка рабочего листа Excel
+    file_stream = io.BytesIO()  # Сброс позиции для перезаписи файла
+    df.to_excel(file_stream, index=False)
     file_stream.seek(0)  # Сброс позиции потока для openpyxl
     workbook = load_workbook(file_stream)
     sheet = workbook.active
@@ -105,7 +137,7 @@ async def get_file_excel(message: types.Message):
         description = str(row.get('Описание', ''))
         barcode = row.get('Баркод', '')
         full_name = str(row.get('ФИО получателя физ. лица', ''))
-        row_index = int(index + 7)
+        row_index = int(index + 2)
 
         product_name = replace_words(product_name, REPLACE_WORDS)
         description = replace_words(description, REPLACE_WORDS)
@@ -147,9 +179,9 @@ async def get_file_excel(message: types.Message):
             cell2.fill = blue_fill
             invalid_data = True
 
-        # Считаем кол-во заказов по польpователям, нужно чтобы потом красить повторяющие красить
-        if passport and barcode and not prohibited_product_rows.get(str(row_index), None):
-            duplicate_orders_dict[f'{passport}_{barcode}'].append(row_index)
+        # Считаем кол-во заказов по пользователям, нужно чтобы потом красить повторяющие красить
+        if passport and pinfl and barcode and not prohibited_product_rows.get(str(row_index), None):
+            duplicate_orders_dict[f'{passport}_{pinfl}_{barcode}'].append(row_index)
 
         # Сохранение уникальных паспортов и данных, только если данные корректны
         if passport not in unique_passports and not invalid_data:
@@ -162,7 +194,7 @@ async def get_file_excel(message: types.Message):
     # Красив на фиолетовый повторяющиеся заказы одного пользователя
     for key in duplicate_orders_dict.keys():
         duplicate_rows = duplicate_orders_dict[key]
-        if len(duplicate_rows) > 1:
+        if len(duplicate_rows) > 3:
             for row in duplicate_rows:
                 for cell in sheet[row]:
                     cell.fill = violet_fill
