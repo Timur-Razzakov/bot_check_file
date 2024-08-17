@@ -31,19 +31,19 @@ async def main() -> None:
     dp.include_router(default_router)
 
     # подключаемся к бд
-    postgresql_url = URL.create(
-        'postgresql+asyncpg',
-        username=config.DB_USER,
-        password=config.DB_PASS,
-        database=config.DB_NAME,
-        host=config.DB_HOST,
-        port=config.DB_PORT
-    )
-    async_engine = create_async_engine(postgresql_url)
-    session_maker = get_session_maker(async_engine)  # для работы с бд создаём сессии
-    await proceed_schemas(async_engine, Base.metadata)
-    await async_engine.dispose()  # решает проблему с event loop
-    await dp.start_polling(bot, session_maker=session_maker, skip_updates=True, context={"access_token": token})
+    # postgresql_url = URL.create(
+    #     'postgresql+asyncpg',
+    #     username=config.DB_USER,
+    #     password=config.DB_PASS,
+    #     database=config.DB_NAME,
+    #     host=config.DB_HOST,
+    #     port=config.DB_PORT
+    # )
+    # async_engine = create_async_engine(postgresql_url)
+    # session_maker = get_session_maker(async_engine)  # для работы с бд создаём сессии
+    # await proceed_schemas(async_engine, Base.metadata)
+    # await async_engine.dispose()  # решает проблему с event loop
+    await dp.start_polling(bot, skip_updates=True, context={"access_token": token})
 
 
 if __name__ == '__main__':
