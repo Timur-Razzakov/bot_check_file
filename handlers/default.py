@@ -95,11 +95,11 @@ async def get_file_excel(message: types.Message, context: dict):
 
     print(df.head())
     # Получаем токен и Штрих коды с сохранением их порядка для загрузки данных из ВБ
-    shk_dict = df['ШК'].head().apply(lambda x: OrderedDict({str(x): None})).tolist()
+    shk_dict = OrderedDict({str(int(shk)): None for shk in df['ШК'].tolist() if shk})
     token = context["access_token"]
 
     # Загрузка данных о товаре из WB и обновления токена авторизации
-    parsed_df, new_token = get_metadata_from_wb(message, shk_dict, token)
+    parsed_df, new_token = await get_metadata_from_wb(message, shk_dict, token)
     context["access_token"] = new_token
     # parsed_df = pd.read_excel("Реестр_200285257- по листам_output.xlsx")
     # parsed_df = pd.read_excel("Реестр_200086623_output.xlsx")
