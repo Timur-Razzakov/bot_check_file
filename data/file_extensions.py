@@ -49,8 +49,8 @@ def is_valid_pinfl(pinfl):
     return isinstance(pinfl, str) and len(pinfl) == 14 and pinfl.isdigit()
 
 
-def is_phone_word_validator(value: str) -> bool:
-    return 'телефон' in value.lower() or 'смартфон' in value.lower()
+def is_phone_word_validator(value: int) -> bool:
+    return 8517140000 == int(value)
 
 
 def contains_prohibited_product(text):

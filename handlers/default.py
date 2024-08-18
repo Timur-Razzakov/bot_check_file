@@ -77,7 +77,7 @@ async def get_file_excel(message: types.Message, context: dict):
 
     # Проверка на наличие нужных столбцов
     required_columns = ['ШК', 'Артикул сайта', 'Наименование товара', 'Описание', 'Баркод', 'ФИО получателя физ. лица',
-                        'Номер паспорта', 'Пинфл', 'Контактный номер', ]
+                        'Номер паспорта','ТН ВЭД', 'Пинфл', 'Контактный номер', ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         await message.answer(f"В файле отсутствуют столбцы: {', '.join(missing_columns)}")
@@ -85,6 +85,7 @@ async def get_file_excel(message: types.Message, context: dict):
 
     # Преобразование ПИНФЛ в целые числа
     df['Пинфл'] = df['Пинфл'].astype('Int64')
+    df['ТН ВЭД'] = df['ТН ВЭД'].astype('Int64')
     df.replace({np.nan: None}, inplace=True)
 
     # Проверяем, можно ли все элементы первой строки преобразовать в целые числа
@@ -133,6 +134,7 @@ async def get_file_excel(message: types.Message, context: dict):
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
+        hs_code = int(row.get('ТН ВЭД', 0))
         product_name = str(row.get('Наименование товара', ''))
         description = str(row.get('Описание', ''))
         barcode = row.get('Баркод', '')
@@ -172,11 +174,11 @@ async def get_file_excel(message: types.Message, context: dict):
             cell = sheet.cell(row=row_index, column=pinfl_col_idx)
             cell.fill = yellow_fill
             invalid_data = True
-        if is_phone_word_validator(product_name) or is_phone_word_validator(description):
-            cell = sheet.cell(row=row_index, column=product_name_col_idx)
-            cell2 = sheet.cell(row=row_index, column=description_col_idx)
-            cell.fill = blue_fill
-            cell2.fill = blue_fill
+        max_col_idx = sheet.max_column
+        if is_phone_word_validator(hs_code):
+            for col_idx in range(1, max_col_idx + 1):
+                cell = sheet.cell(row=row_index, column=col_idx)
+                cell.fill = blue_fill
             invalid_data = True
 
         # Считаем кол-во заказов по пользователям, нужно чтобы потом красить повторяющие красить
