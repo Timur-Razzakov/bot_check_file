@@ -12,7 +12,7 @@ from openpyxl.reader.excel import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl, \
-    contains_prohibited_product, red_fill, replace_words
+    contains_prohibited_product, red_fill, replace_words, get_all_passport, orange_fill
 from data.file_extensions import is_phone_word_validator, blue_fill, violet_fill
 from data.prohibit_product import REPLACE_WORDS
 from keyboards import default_kb
@@ -76,8 +76,9 @@ async def get_file_excel(message: types.Message, context: dict):
     df = pd.read_excel(file_stream, header=4)
 
     # Проверка на наличие нужных столбцов
-    required_columns = ['ШК', 'Артикул сайта', 'Наименование товара', 'Описание', 'Баркод', 'ФИО получателя физ. лица',
-                        'Номер паспорта', 'Пинфл', 'Контактный номер', ]
+    required_columns = ['ШК', 'Артикул сайта', 'Наименование товара', 'Описание', 'Баркод',
+                        'ФИО получателя физ. лица',
+                        'Номер паспорта', 'ТН ВЭД', 'Пинфл', 'Контактный номер', ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         await message.answer(f"В файле отсутствуют столбцы: {', '.join(missing_columns)}")
@@ -85,6 +86,7 @@ async def get_file_excel(message: types.Message, context: dict):
 
     # Преобразование ПИНФЛ в целые числа
     df['Пинфл'] = df['Пинфл'].astype('Int64')
+    df['ТН ВЭД'] = df['ТН ВЭД'].astype('Int64')
     df.replace({np.nan: None}, inplace=True)
 
     # Проверяем, можно ли все элементы первой строки преобразовать в целые числа
@@ -93,7 +95,6 @@ async def get_file_excel(message: types.Message, context: dict):
         df.drop(index=0, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
-    print(df.head())
     # Получаем токен и Штрих коды с сохранением их порядка для загрузки данных из ВБ
     shk_dict = OrderedDict({str(int(shk)): None for shk in df['ШК'].tolist() if shk})
     token = context["access_token"]
@@ -101,8 +102,6 @@ async def get_file_excel(message: types.Message, context: dict):
     # Загрузка данных о товаре из WB и обновления токена авторизации
     parsed_df, new_token = await get_metadata_from_wb(message, shk_dict, token)
     context["access_token"] = new_token
-    # parsed_df = pd.read_excel("Реестр_200285257- по листам_output.xlsx")
-    # parsed_df = pd.read_excel("Реестр_200086623_output.xlsx")
     # Объединение данных из ВБ с данными из реестра
     df["Категория"] = parsed_df["Категория"]
     df["Подкатегория"] = parsed_df["Подкатегория"]
@@ -129,10 +128,15 @@ async def get_file_excel(message: types.Message, context: dict):
 
     unique_passports = set()
     unique_data = []
-
+    all_passport = get_all_passport()
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
+        hs_code = row.get('ТН ВЭД', 0)
+        if hs_code is None or hs_code == '':
+            hs_code = 0
+        else:
+            hs_code = int(hs_code)
         product_name = str(row.get('Наименование товара', ''))
         description = str(row.get('Описание', ''))
         barcode = row.get('Баркод', '')
@@ -168,15 +172,22 @@ async def get_file_excel(message: types.Message, context: dict):
             df.at[index, 'Номер паспорта'] = cleaned_passport
             sheet.cell(row=row_index, column=passport_col_idx, value=cleaned_passport)
 
+        if cleaned_passport in all_passport:
+            for col_idx in range(1, len(df.columns) + 1):
+                cell = sheet.cell(row=row_index,
+                                  column=col_idx)
+                cell.fill = orange_fill
+
         if not is_valid_pinfl(pinfl):
             cell = sheet.cell(row=row_index, column=pinfl_col_idx)
             cell.fill = yellow_fill
             invalid_data = True
-        if is_phone_word_validator(product_name) or is_phone_word_validator(description):
-            cell = sheet.cell(row=row_index, column=product_name_col_idx)
-            cell2 = sheet.cell(row=row_index, column=description_col_idx)
-            cell.fill = blue_fill
-            cell2.fill = blue_fill
+        max_col_idx = sheet.max_column
+        print(234234, hs_code)
+        if is_phone_word_validator(hs_code):
+            for col_idx in range(1, max_col_idx + 1):
+                cell = sheet.cell(row=row_index, column=col_idx)
+                cell.fill = blue_fill
             invalid_data = True
 
         # Считаем кол-во заказов по пользователям, нужно чтобы потом красить повторяющие красить
