@@ -19,8 +19,6 @@ dnspython==2.6.1
 email_validator==2.2.0
 et-xmlfile==1.1.0
 exceptiongroup==1.2.2
-fastapi==0.111.1
-fastapi-cli==0.0.4
 frozenlist==1.4.0
 google-auth==2.34.0
 google-auth-oauthlib==1.2.1
