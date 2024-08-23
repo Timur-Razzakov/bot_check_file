@@ -13,3 +13,5 @@ DB_HOST = config("DB_HOST")
 DB_PORT = config("PORT")
 WB_EMPLOYEE_ID = config("WB_EMPLOYEE_ID")
 WB_PASSWORD = config("WB_PASSWORD")
+
+PASSPORT_URL = config("PASSPORT_URL")

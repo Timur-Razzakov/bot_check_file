@@ -1,10 +1,13 @@
 import os
 import re
 
+import gspread
 from aiogram import types
 from aiogram.filters import BaseFilter
+from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl.styles import PatternFill
 
+from data.config import PASSPORT_URL
 from data.prohibit_product import PROHIBIT_PRODUCT, REPLACEMENT
 
 # Задаем цвета для окрашивания
@@ -12,6 +15,7 @@ red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="soli
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 blue_fill = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")
 violet_fill = PatternFill(start_color="D9D2E9", end_color="D9D2E9", fill_type="solid")
+orange_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
 
 # Путь к папке для загрузок
 DOWNLOADS_DIR = 'downloads'
@@ -45,11 +49,24 @@ def is_valid_passport(passport):
     return result, cleaned_passport
 
 
+def get_all_passport(document_url: str = PASSPORT_URL):
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name('data/credentials.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open_by_url(document_url)
+    worksheet = sheet.sheet1
+    passports_column = worksheet.col_values(1)  # 1 означает первый столбец
+
+    passports = [passport for passport in passports_column if passport]
+    return passports
+
+
 def is_valid_pinfl(pinfl):
     return isinstance(pinfl, str) and len(pinfl) == 14 and pinfl.isdigit()
 
 
 def is_phone_word_validator(value: int) -> bool:
+    print(8517140000 == int(value))
     return 8517140000 == int(value)
 
 
