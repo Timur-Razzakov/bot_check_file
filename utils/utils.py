@@ -25,7 +25,6 @@ async def download_file(bot: Bot, document: Document) -> tuple[io.BytesIO, str |
 
 def is_convertible_to_int(value):
     if pandas.isna(value):
-        print(value, type(value))
         return True
     try:
         # Пробуем преобразовать значение в int

@@ -128,7 +128,7 @@ async def get_file_excel(message: types.Message, context: dict):
 
     unique_passports = set()
     unique_data = []
-    all_passport = get_all_passport()
+    # all_passport = get_all_passport()
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
@@ -164,26 +164,31 @@ async def get_file_excel(message: types.Message, context: dict):
             prohibited_product_rows[str(row_index)] = True
         is_valid, cleaned_passport = is_valid_passport(passport)
         if not is_valid:
-            cell = sheet.cell(row=row_index, column=passport_col_idx)
-            cell.fill = yellow_fill
-            invalid_data = True
+            for col_idx in range(1, len(df.columns) + 1):
+                cell = sheet.cell(row=row_index,
+                                  column=col_idx)
+                cell.fill = yellow_fill
+            # cell = sheet.cell(row=row_index, column=passport_col_idx)
+            # cell.fill = yellow_fill
+            # invalid_data = True
         else:
             # Внесение изменений в DataFrame и лист Excel
             df.at[index, 'Номер паспорта'] = cleaned_passport
             sheet.cell(row=row_index, column=passport_col_idx, value=cleaned_passport)
+        """ закрашиваем перелимиты"""
+        # if cleaned_passport in all_passport:
+        #     for col_idx in range(1, len(df.columns) + 1):
+        #         cell = sheet.cell(row=row_index,
+        #                           column=col_idx)
+        #         cell.fill = orange_fill
 
-        if cleaned_passport in all_passport:
+        if not is_valid_pinfl(pinfl):
             for col_idx in range(1, len(df.columns) + 1):
                 cell = sheet.cell(row=row_index,
                                   column=col_idx)
-                cell.fill = orange_fill
+                cell.fill = yellow_fill
 
-        if not is_valid_pinfl(pinfl):
-            cell = sheet.cell(row=row_index, column=pinfl_col_idx)
-            cell.fill = yellow_fill
-            invalid_data = True
         max_col_idx = sheet.max_column
-        print(234234, hs_code)
         if is_phone_word_validator(hs_code):
             for col_idx in range(1, max_col_idx + 1):
                 cell = sheet.cell(row=row_index, column=col_idx)

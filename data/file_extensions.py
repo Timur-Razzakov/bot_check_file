@@ -66,7 +66,6 @@ def is_valid_pinfl(pinfl):
 
 
 def is_phone_word_validator(value: int) -> bool:
-    print(8517140000 == int(value))
     return 8517140000 == int(value)
 
 
