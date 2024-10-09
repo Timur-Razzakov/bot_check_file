@@ -108,7 +108,7 @@ async def get_file_excel(message: types.Message, context: dict):
     df["Артикул сайта"] = parsed_df["Артикул"]
     # # для теста
     # df["Артикул"] = parsed_df["Артикул"]
-    # df["Названия"] = parsed_df["Названия"]
+    df["Названия"] = parsed_df["Названия"]
 
     # Загрузка рабочего листа Excel
     file_stream = io.BytesIO()  # Сброс позиции для перезаписи файла
