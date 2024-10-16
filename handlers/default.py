@@ -12,11 +12,13 @@ from openpyxl.reader.excel import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from data.file_extensions import DocumentTypeFilter, is_valid_passport, yellow_fill, is_valid_pinfl, \
-    contains_prohibited_product, red_fill, replace_words, get_all_passport, orange_fill
+    contains_prohibited_product, red_fill, replace_words, get_all_passport, orange_fill, \
+    highlight_invalid_cell
 from data.file_extensions import is_phone_word_validator, blue_fill, violet_fill
 from data.prohibit_product import REPLACE_WORDS
 from keyboards import default_kb
 from loader import dp, bot
+from services.passport_checker import PassportChecker
 from services.wb_parser.wb_parser import get_metadata_from_wb
 from utils.utils import download_file, is_convertible_to_int
 
@@ -162,15 +164,27 @@ async def get_file_excel(message: types.Message, context: dict):
 
             # Сохраняем номер строки чтобы не перекрашивать её в  фиолетовый
             prohibited_product_rows[str(row_index)] = True
-        is_valid, cleaned_passport = is_valid_passport(passport)
+        is_valid, cleaned_passport = is_valid_passport(passport=passport)
+        if not is_valid_pinfl(pinfl):
+            highlight_invalid_cell(sheet, row_index, pinfl_col_idx, yellow_fill)
+            invalid_data = True
+
         if not is_valid:
-            cell = sheet.cell(row=row_index, column=passport_col_idx)
-            cell.fill = yellow_fill
+            highlight_invalid_cell(sheet, row_index, pinfl_col_idx, yellow_fill)
             invalid_data = True
         else:
-            # Внесение изменений в DataFrame и лист Excel
-            df.at[index, 'Номер паспорта'] = cleaned_passport
-            sheet.cell(row=row_index, column=passport_col_idx, value=cleaned_passport)
+            check_in_service = PassportChecker().passport_pinfl_is_correct(pinfl=pinfl,
+                                                                           passport_serial_number=passport)
+            if check_in_service == 1:
+                # Внесение изменений в DataFrame и лист Excel
+                df.at[index, 'Номер паспорта'] = cleaned_passport
+                sheet.cell(row=row_index, column=passport_col_idx, value=cleaned_passport)
+            elif check_in_service == 0:
+                await message.answer(
+                    'Сервис по определению ПД недоступен!!,\n обратитесь к Админу https://t.me/Razzakov_Timur')
+            else:
+                highlight_invalid_cell(sheet, row_index, pinfl_col_idx, yellow_fill)
+                invalid_data = True
 
         if cleaned_passport in all_passport:
             for col_idx in range(1, len(df.columns) + 1):
@@ -178,12 +192,7 @@ async def get_file_excel(message: types.Message, context: dict):
                                   column=col_idx)
                 cell.fill = orange_fill
 
-        if not is_valid_pinfl(pinfl):
-            cell = sheet.cell(row=row_index, column=pinfl_col_idx)
-            cell.fill = yellow_fill
-            invalid_data = True
         max_col_idx = sheet.max_column
-        print(234234, hs_code)
         if is_phone_word_validator(hs_code):
             for col_idx in range(1, max_col_idx + 1):
                 cell = sheet.cell(row=row_index, column=col_idx)

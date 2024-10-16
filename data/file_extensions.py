@@ -38,17 +38,6 @@ class DocumentTypeFilter(BaseFilter):
         return False
 
 
-# Функция для проверки корректности номера паспорта
-def is_valid_passport(passport):
-    # Удаляем пробелы и приводим буквы к заглавному регистру
-    cleaned_passport = passport.strip().replace(' ', '').upper()
-    result = (isinstance(cleaned_passport, str) and
-              len(cleaned_passport) == 9 and
-              cleaned_passport[:2].isalpha() and
-              cleaned_passport[2:].isdigit())
-    return result, cleaned_passport
-
-
 def get_all_passport(document_url: str = PASSPORT_URL):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_name('data/credentials.json', scope)
@@ -61,12 +50,22 @@ def get_all_passport(document_url: str = PASSPORT_URL):
     return passports
 
 
+# Функция для проверки корректности номера паспорта
+def is_valid_passport(passport: str):
+    # Удаляем пробелы и приводим буквы к заглавному регистру
+    cleaned_passport = passport.strip().replace(' ', '').upper()
+    result = (isinstance(cleaned_passport, str) and
+              len(cleaned_passport) == 9 and
+              cleaned_passport[:2].isalpha() and
+              cleaned_passport[2:].isdigit())
+    return result, cleaned_passport
+
+
 def is_valid_pinfl(pinfl):
     return isinstance(pinfl, str) and len(pinfl) == 14 and pinfl.isdigit()
 
 
 def is_phone_word_validator(value: int) -> bool:
-    print(8517140000 == int(value))
     return 8517140000 == int(value)
 
 
@@ -81,3 +80,9 @@ def contains_prohibited_product(text):
 def replace_words(text, replacements):
     pattern = re.compile('|'.join(re.escape(word) for word in replacements), re.IGNORECASE)
     return pattern.sub(lambda match: REPLACEMENT, text)
+
+
+def highlight_invalid_cell(sheet, row_index, col_idx, fill_color):
+    """Подсветить ячейку цветом."""
+    cell = sheet.cell(row=row_index, column=col_idx)
+    cell.fill = fill_color
