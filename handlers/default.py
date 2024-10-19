@@ -130,7 +130,7 @@ async def get_file_excel(message: types.Message, context: dict):
 
     unique_passports = set()
     unique_data = []
-    all_passport = get_all_passport()
+    # all_passport = get_all_passport()
     for index, row in df.iterrows():
         passport = str(row.get('Номер паспорта', '')).strip()
         pinfl = str(row.get('Пинфл', ''))
@@ -186,11 +186,11 @@ async def get_file_excel(message: types.Message, context: dict):
                 highlight_invalid_cell(sheet, row_index, pinfl_col_idx, yellow_fill)
                 invalid_data = True
 
-        if cleaned_passport in all_passport:
-            for col_idx in range(1, len(df.columns) + 1):
-                cell = sheet.cell(row=row_index,
-                                  column=col_idx)
-                cell.fill = orange_fill
+        # if cleaned_passport in all_passport:
+        #     for col_idx in range(1, len(df.columns) + 1):
+        #         cell = sheet.cell(row=row_index,
+        #                           column=col_idx)
+        #         cell.fill = orange_fill
 
         max_col_idx = sheet.max_column
         if is_phone_word_validator(hs_code):

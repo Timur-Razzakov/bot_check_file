@@ -36,8 +36,7 @@ class PassportChecker():
             "pinfl": pinfl,
             "passport_serial_number": passport_serial_number,
         }
-        signed_headers = Signature(
-            request=self.request, secret_key=SECRET_KEY
+        signed_headers = Signature(secret_key=SECRET_KEY
         ).add_signature_to_headers(params, headers)
         individual_details = self.get_details(params=params, url=url, headers=signed_headers)
         if 'code' in individual_details:

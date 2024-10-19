@@ -2,8 +2,7 @@ import hashlib
 import hmac
 
 class Signature:
-    def __init__(self, request, secret_key):
-        self.request = request
+    def __init__(self, secret_key):
         self.secret_key = secret_key
 
     def generate_signature(self, request_body: dict) -> str:
