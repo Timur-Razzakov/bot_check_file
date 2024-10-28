@@ -2,13 +2,13 @@ import pandas as pd
 from aiogram import types, Router, F
 from aiogram.filters import CommandStart, and_f
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from asgiref.sync import sync_to_async
 
 from data.file_extensions import DocumentTypeFilter
 from keyboards import default_kb
 from loader import dp, bot
 from services.clients_checker.checker import checker_info_from_wb, checker_info_from_ozone
+from states.product_data import FileUploadState
 from utils.utils import download_file
 
 default_router = Router(name=__name__)
@@ -21,11 +21,6 @@ class ProhibitData:
 
 
 prohibit_data = {}
-
-
-class FileUploadState(StatesGroup):
-    awaiting_file = State()
-    market_place = State()
 
 
 # Создаем функцию для инициализации get_help_text
