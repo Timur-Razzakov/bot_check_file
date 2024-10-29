@@ -13,6 +13,7 @@ from data.prohibit_product import PROHIBIT_PRODUCT, REPLACEMENT
 # Задаем цвета для окрашивания
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+dark_gray_fill = PatternFill(start_color="A9A9A9", end_color="A9A9A9", fill_type="solid")
 blue_fill = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")
 violet_fill = PatternFill(start_color="D9D2E9", end_color="D9D2E9", fill_type="solid")
 orange_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
@@ -50,14 +51,20 @@ def get_all_passport(document_url: str = PASSPORT_URL):
     return passports
 
 
+PASSPORT_CODE = ['AA', 'AB', 'AC', 'FA', 'KA', 'AD', 'FB', 'XS', 'FS', 'FB', 'FK']
+
+
 # Функция для проверки корректности номера паспорта
 def is_valid_passport(passport: str):
     # Удаляем пробелы и приводим буквы к заглавному регистру
     cleaned_passport = passport.strip().replace(' ', '').upper()
-    result = (isinstance(cleaned_passport, str) and
-              len(cleaned_passport) == 9 and
-              cleaned_passport[:2].isalpha() and
-              cleaned_passport[2:].isdigit())
+    if cleaned_passport[0:2] in PASSPORT_CODE:
+        result = (isinstance(cleaned_passport, str) and
+                  len(cleaned_passport) == 9 and
+                  cleaned_passport[:2].isalpha() and
+                  cleaned_passport[2:].isdigit())
+    else:
+        result = 0
     return result, cleaned_passport
 
 
