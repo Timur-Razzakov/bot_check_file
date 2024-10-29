@@ -84,5 +84,7 @@ def replace_words(text, replacements):
 
 def highlight_invalid_cell(sheet, row_index, col_idx, fill_color):
     """Подсветить ячейку цветом."""
-    cell = sheet.cell(row=row_index, column=col_idx)
-    cell.fill = fill_color
+    max_col_idx = sheet.max_column
+    for col_idx in range(1, max_col_idx +1):
+        cell = sheet.cell(row=row_index, column=col_idx)
+        cell.fill = fill_color
